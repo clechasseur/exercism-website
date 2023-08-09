@@ -4,7 +4,7 @@ class User::Challenges::FeaturedExercisesProgress12In23
   initialize_with :user
 
   def call
-    exercises = self.class.featured_exercises.filter_map do |exercise_slug, track_slugs|
+    self.class.featured_exercises.filter_map do |exercise_slug, track_slugs|
       next unless solutions.key?(exercise_slug)
 
       solved_in_featured_tracks = solutions[exercise_slug].select { |track_slug| track_slugs.include?(track_slug) }
@@ -14,12 +14,11 @@ class User::Challenges::FeaturedExercisesProgress12In23
 
       solved_before_23 = solved_in_featured_tracks.select { |_, year| year < 2023 }
       next [solved_before_23.keys.first, exercise_slug] if solved_before_23.size == track_slugs.size
+    end.tap do |exercises|
+      if exercises.count { |(_, exercise_slug)| MARCH_DUPLICATES.include?(exercise_slug) } > 1
+        exercises.reject! { |(_, exercise_slug)| MARCH_DUPLICATES_TO_REMOVE.include?(exercise_slug) }
+      end
     end
-
-    has_duplicate = exercises.count { |(_, exercise_slug)| MARCH_DUPLICATES.include?(exercise_slug) } == MARCH_DUPLICATES.length
-    exercises.reject! { |(_, exercise_slug)| MARCH_DUPLICATES_TO_REMOVE.include?(exercise_slug) } if has_duplicate
-
-    exercises
   end
 
   def self.num_featured_exercises = self.featured_exercises.size - 1
